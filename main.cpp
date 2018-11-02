@@ -74,8 +74,8 @@ class cities{
 }
     void change_color(int id,color c){
          for(auto& i:inter)
-        if(i.id==id)
-        i.flag=c;
+           if(i.id==id)
+             i.flag=c;
     }
     int getSize() const{
         return size;
@@ -100,7 +100,7 @@ class kingdom{
         this->boundary.push_back(grobal.find_city_by_id(c.boundary[i]));
     }
      bool can_increase(){
-        for(auto i:boundary)
+        for(auto& i:boundary)
           if(i.flag==belong?BLACK:RED)
            return true;
         return false;
@@ -146,6 +146,9 @@ class kingdoms{
     void addnew(kingdom k){
         inter.push_back(k);
     }
+    void clear(){
+        inter.clear();
+    }
     const vector<kingdom>& getInter(){
         return inter;
     }
@@ -169,6 +172,7 @@ struct competitor{
 class Game{
     private:
     cities grobal;
+    vector<int> changed_cities;
     map<int,competitor> white_cities;
     kingdoms bK;
     kingdoms rK;
@@ -177,6 +181,8 @@ class Game{
     string result;
     void form_kingdom(){
         bool* processed =new bool[grobal.getSize()];
+        this->bK.clear();
+        this->rK.clear();
         for(int i=0;i<grobal.getSize();i++)
          processed[i]= grobal.find_city_by_id(i).flag==WHITE;
         for(int i=0;i<grobal.getSize();i++){
@@ -251,11 +257,22 @@ class Game{
             grobal.change_color(i.first,judge(i.second));
         }
     }
-    bool game_over() const{
- 
+    bool check_size() {
+        for(auto i: bK.getInter())
+         for(auto j:rK.getInter())
+          if(i.getSize()!=j.getSize())
+           return false;
+        return true;
+    }
+    bool game_analyze(){
+        changed_cities.clear();
+        for(auto i:rK.getInter()){
+        }
+        return bK.getSize()==0||rK.getSize()==0||check_size();
     }
     void attack_per_second(){
- 
+        for(auto i:changed_cities)
+            grobal.change_color(i,grobal.find_city_by_id(i).flag==BLACK?RED:BLACK);
     }
     const string& result_record() {
             switch(winner){
@@ -279,7 +296,7 @@ class Game{
         }    
     }
     const string& second_stage(){
-        while(!game_over()){
+        while(!game_analyze()){
             attack_per_second();
             form_kingdom();
         }        
