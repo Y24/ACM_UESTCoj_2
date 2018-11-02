@@ -1,6 +1,9 @@
 #include<iostream>
 #include<vector>
+#include<map>
 using namespace std;
+void init(int* size,int* roads_sum,int* belongs_sum,int** roads,int** belongs);
+void result_output(int test_sum,const string* result);
 enum color{WHITE,RED,BLACK};
 struct city{
     color flag;//the flag of belong 
@@ -41,7 +44,7 @@ class cities{
           }
           for(int i=0;i<size;i++)
             inter.push_back(allcities[i]);
-
+ 
             
     }
     public:
@@ -73,7 +76,7 @@ class cities{
         return size;
     }
 };
-
+ 
 class kingdom{
     private: 
     bool belong;
@@ -141,6 +144,9 @@ class kingdoms{
     void addnew(kingdom k){
         inter.push_back(k);
     }
+    const vector<kingdom>& getInter(){
+        return inter;
+    }
     void delete_one(int position){
         inter.erase(inter.begin()-1+position);
     }
@@ -151,31 +157,33 @@ class kingdoms{
         return inter.size();
     }
 };
+struct competitor{
+    vector<int> red_sizes;
+    vector<int> red_ids;
+    vector<int> black_sizes;
+    vector<int> black_ids;
+};
 class Game{
     private:
     cities grobal;
-    vector<city> white_cities;
+    map<int,competitor> white_cities;
     kingdoms bK;
     kingdoms rK;
     color winner;
     int final[2];
     string result;
-    void add_white(city c){
-       white_cities.push_back(c);
-
-    }
-    void form_kindom(){
+    void form_kingdom(){
         bool* processed =new bool[grobal.getSize()];
         for(int i=0;i<grobal.getSize();i++)
          processed[i]= grobal.find_city_by_id(i).flag==WHITE;
         for(int i=0;i<grobal.getSize();i++){
-            city c=grobal.find_city_by_id[i];
+            city c=grobal.find_city_by_id(i);
             if(!processed[i]){
                 kingdom k(c,this->grobal);
                 while(k.can_increase())
                  k.increase(this->grobal);
                 for(auto j: k.getInter()){
-                    processed[j.id]==true;
+                    processed[j.id]=true;
                 }
                 if(k.getBelong())
                   this->bK.addnew(k);
@@ -183,17 +191,42 @@ class Game{
             }
         }
     }
+    void white_analyze(){
+        white_cities.clear();
+        for(auto i:bK.getInter()){
+            auto boundary=i.getBoundary();
+            for(int j=0;j<boundary.size();j++){
+                if(boundary[j].flag==WHITE)
+                    white_cities[boundary[j].id].black_sizes.push_back(i.getSize());
+                    white_cities[boundary[j].id].black_ids.push_back(boundary[j].id); 
+            }
+        }
+        for(auto i:rK.getInter()){
+            auto boundary=i.getBoundary();
+            for(int j=0;j<boundary.size();j++){
+                if(boundary[j].flag==WHITE)
+                    white_cities[boundary[j].id].red_sizes.push_back(i.getSize());
+                    white_cities[boundary[j].id].red_ids.push_back(boundary[j].id); 
+            }
+        }
+    }
+    void invade(){
+
+    }
     bool has_white_cities() const{
-        return white_cities.size()!=0;
+        return white_cities.size() != 0;
     }
     void invade_per_second(){
-
+        do{
+            white_analyze();
+            invade();
+        } while(has_white_cities);
     }
     bool game_over() const{
-
+ 
     }
     void attack_per_second(){
-
+ 
     }
     const string& result_record() const{
             
@@ -203,13 +236,10 @@ class Game{
         this->grobal=grobal;
         this->white_cities.clear();
         this->winner=WHITE;
-        for(int i=0;i<grobal.getSize();i++){
-            if(grobal.find_city_by_id(i).flag==WHITE)
-              (this->white_cities).push_back(grobal.find_city_by_id(i));
-        }
+        white_cities.clear();
     }
     void first_stage(){
-        form_kindom();
+        form_kingdom();
         while(has_white_cities())
         invade_per_second();
     }
@@ -225,10 +255,11 @@ int main(){
     string* result=new string[test_sum];
     for(int i=0;i<test_sum;i++){
         int size,roads_sum, belongs_sum;
-        int** roads;
-        int** belongs;
+        int** roads=NULL;
+        int** belongs=NULL;
         init(&size,&roads_sum,&belongs_sum,roads,belongs);      
       cities global=cities(size,roads,roads_sum,belongs,belongs_sum);
+      Game game=Game(global);
       result_output(test_sum,result);
       delete[] result;
     }
