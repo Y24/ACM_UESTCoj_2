@@ -257,18 +257,42 @@ class Game{
             grobal.change_color(i.first,judge(i.second));
         }
     }
-    bool check_size() {
-        for(auto i: bK.getInter())
-         for(auto j:rK.getInter())
-          if(i.getSize()!=j.getSize())
-           return false;
-        return true;
+    kingdom find_kingdom_by_id(int id){
+        for(auto i:bK.getInter()){
+            for(auto& j:i.getInter())
+                if(j.id==id)
+                 return i;
+        }
+        for(auto i:rK.getInter()){
+            for(auto& j:i.getInter())
+                if(j.id==id)
+                 return i;
+        }
+        return kingdom();
     }
     bool game_analyze(){
         changed_cities.clear();
-        for(auto i:rK.getInter()){
+        for(auto i:bK.getInter()){
+            auto boundary=i.getBoundary();
+            for(int j=0;j<boundary.size();j++)
+                if(boundary[j].flag==RED){
+                    kingdom k=find_kingdom_by_id(boundary[j].id);
+                    if(k.getSize()<i.getSize())
+                    for(auto& c:k.getInter())
+                     changed_cities.push_back(c.id);
+                }        
         }
-        return bK.getSize()==0||rK.getSize()==0||check_size();
+        for(auto i:rK.getInter()){
+            auto boundary=i.getBoundary();
+            for(int j=0;j<boundary.size();j++)
+                if(boundary[j].flag==BLACK){
+                    kingdom k=find_kingdom_by_id(boundary[j].id);
+                    if(k.getSize()<i.getSize())
+                    for(auto& c:k.getInter())
+                     changed_cities.push_back(c.id);
+                }    
+    }
+         return changed_cities.size() != 0;
     }
     void attack_per_second(){
         for(auto i:changed_cities)
@@ -296,7 +320,7 @@ class Game{
         }    
     }
     const string& second_stage(){
-        while(!game_analyze()){
+        while(game_analyze()){
             attack_per_second();
             form_kingdom();
         }        
