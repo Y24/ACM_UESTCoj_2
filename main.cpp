@@ -72,6 +72,11 @@ class cities{
         if(i.id==id)
         return i;
 }
+    void change_color(int id,color c){
+         for(auto& i:inter)
+        if(i.id==id)
+        i.flag=c;
+    }
     int getSize() const{
         return size;
     }
@@ -80,17 +85,15 @@ class cities{
 class kingdom{
     private: 
     bool belong;
-    int size;
     vector<city> inter;
     vector<city> boundary;
     public:
     kingdom(){
-        this->size=0;
         this->inter.clear();
         this->boundary.clear();
     }
     kingdom(city c,const cities grobal){
-        this->size=1;
+        this->inter.clear();
         this->inter.push_back(c);
         this->belong= c.flag==BLACK;
         for(int i=0;i<c.boundary.size();i++)
@@ -111,7 +114,6 @@ class kingdom{
     void invade_one(city c,int position,const cities grobal,color flag){
          if(c.flag==flag){
               this->inter.push_back(c);
-              this->size++;
               this->boundary.erase(boundary.begin()-1+position);
               for(auto i:c.boundary)
                 if(grobal.find_city_by_id(i).id!=boundary[i].id)
@@ -125,7 +127,7 @@ class kingdom{
         this->belong = !this->belong;
     }
     int getSize() const{
-        return size;
+        return inter.size();
     }
     const vector<city>& getInter(){
         return inter;
@@ -154,14 +156,15 @@ class kingdoms{
         return inter.size()==0;
     }
     int getSize() const{
-        return inter.size();
+        int count=0;
+        for(auto i:inter)
+          count += i.getSize();
+        return count;
     }
 };
 struct competitor{
     vector<int> red_sizes;
-    vector<int> red_ids;
     vector<int> black_sizes;
-    vector<int> black_ids;
 };
 class Game{
     private:
@@ -190,37 +193,63 @@ class Game{
                 else this->rK.addnew(k);
             }
         }
+        delete[] processed;
     }
-    void white_analyze(){
+    bool white_analyze(){
         white_cities.clear();
         for(auto i:bK.getInter()){
             auto boundary=i.getBoundary();
-            for(int j=0;j<boundary.size();j++){
+            for(int j=0;j<boundary.size();j++)
                 if(boundary[j].flag==WHITE)
-                    white_cities[boundary[j].id].black_sizes.push_back(i.getSize());
-                    white_cities[boundary[j].id].black_ids.push_back(boundary[j].id); 
-            }
+                    white_cities[boundary[j].id].black_sizes.push_back(i.getSize()); 
+            
         }
         for(auto i:rK.getInter()){
             auto boundary=i.getBoundary();
-            for(int j=0;j<boundary.size();j++){
+            for(int j=0;j<boundary.size();j++)
                 if(boundary[j].flag==WHITE)
-                    white_cities[boundary[j].id].red_sizes.push_back(i.getSize());
-                    white_cities[boundary[j].id].red_ids.push_back(boundary[j].id); 
-            }
+                    white_cities[boundary[j].id].red_sizes.push_back(i.getSize()); 
         }
+         return white_cities.size() != 0;
     }
-    void invade(){
-
+    int Max(const vector<int>& com) const{
+        int max=0;
+        for(auto i:com)
+          if(i>max)
+            max=i;
+        return max;
     }
-    bool has_white_cities() const{
-        return white_cities.size() != 0;
+    int Sum(const vector<int>& com) const{
+        int sum=0;
+        for(auto i:com)
+            sum += i;
+        return sum;
+    }
+    color judge(const competitor& com) const{
+        int bmax=Max(com.black_sizes);
+        int rmax=Max(com.red_sizes);
+        int bsum=Sum(com.black_sizes);
+        int rsum=Sum(com.red_sizes);
+        int btsum=bK.getSize();
+        int rtsum=rK.getSize();
+        if(bmax!=rmax){
+            if(bmax>rmax) return BLACK;
+            else return RED;
+        }
+        else if(bsum!=rsum){
+            if(bsum>rsum) return BLACK;
+            else return RED;
+        }
+        else if(btsum!=rtsum){
+            if(btsum>rtsum) return BLACK;
+            else return RED;
+        }
+        else return BLACK;
     }
     void invade_per_second(){
-        do{
-            white_analyze();
-            invade();
-        } while(has_white_cities);
+        for(auto i:white_cities){
+            grobal.change_color(i.first,judge(i.second));
+        }
     }
     bool game_over() const{
  
@@ -228,8 +257,13 @@ class Game{
     void attack_per_second(){
  
     }
-    const string& result_record() const{
-            
+    const string& result_record() {
+            switch(winner){
+            case BLACK: result="Blcak"; break;
+            case RED:   result="Red";   break;
+            case WHITE: result=to_string(final[0])+" "+to_string(final[1]);
+        }
+        return result;
         }
     public:
     Game(cities& grobal){
@@ -239,13 +273,17 @@ class Game{
         white_cities.clear();
     }
     void first_stage(){
-        form_kingdom();
-        while(has_white_cities())
-        invade_per_second();
+        while(white_analyze()){
+            invade_per_second();
+            form_kingdom();
+        }    
     }
-    void second_stage(){
-        while(!game_over())
-        attack_per_second();
+    const string& second_stage(){
+        while(!game_over()){
+            attack_per_second();
+            form_kingdom();
+        }        
+        return result_record();
     }
     
 };
@@ -260,10 +298,11 @@ int main(){
         init(&size,&roads_sum,&belongs_sum,roads,belongs);      
       cities global=cities(size,roads,roads_sum,belongs,belongs_sum);
       Game game=Game(global);
-      result_output(test_sum,result);
-      delete[] result;
+      game.first_stage();
+      result[i]=game.second_stage();
     }
-   
+    result_output(test_sum,result);
+    delete[] result;
     return 0;
 }
 void init(int* size,int* roads_sum,int* belongs_sum,int** roads,int** belongs){
@@ -282,5 +321,5 @@ void init(int* size,int* roads_sum,int* belongs_sum,int** roads,int** belongs){
 }
 void result_output(int test_sum,const string* result){
      for(int i=0;i<test_sum;i++)
-      cout<<result[i]<<endl;
+      cout<<"Case #"<<i+1<<": "<<result[i]<<endl;
 }
